@@ -218,7 +218,7 @@ public class BezierFigure extends AbstractAttributedFigure {
   public boolean contains(Point2D.Double p, double scaleDenominator) {
     double tolerance = Math.max(2f, AttributeKeys.getStrokeTotalWidth(this, scaleDenominator) / 2d);
     if (isClosed() || attr().get(FILL_COLOR) != null && attr().get(UNCLOSED_PATH_FILLED)) {
-      return isFigureClosedContains(p, scaleDenominator, tolerance);
+      return isFigureClosedContains(p, scaleDenominator);
     }
     if (!isClosed()) {
       return isFigureNotClosedContains(p, tolerance);
@@ -226,7 +226,7 @@ public class BezierFigure extends AbstractAttributedFigure {
     return false;
   }
 
-  private boolean isFigureClosedContains(Point2D.Double p, double scaleDenominator, double tolerance) {
+  private boolean isFigureClosedContains(Point2D.Double p, double scaleDenominator) {
     if (path.contains(p)) {
       return true;
     }
@@ -236,10 +236,7 @@ public class BezierFigure extends AbstractAttributedFigure {
                     grow,
                     AttributeKeys.getStrokeTotalWidth(this, scaleDenominator)
                             * attr().get(STROKE_MITER_LIMIT));
-    if (gs.createStrokedShape(path).contains(p)) {
-      return true;
-    }
-    return false;
+    return gs.createStrokedShape(path).contains(p);
   }
 
   private boolean isFigureNotClosedContains(Point2D.Double p, double tolerance) {
@@ -249,10 +246,7 @@ public class BezierFigure extends AbstractAttributedFigure {
     if (attr().get(START_DECORATION) != null && isStartDecorationContains(p, tolerance)) {
       return true;
     }
-    if (attr().get(END_DECORATION) != null && isEndDecorationContains(p, tolerance)) {
-      return true;
-    }
-    return false;
+    return attr().get(END_DECORATION) != null && isEndDecorationContains(p, tolerance);
   }
 
   private boolean isStartDecorationContains(Point2D.Double p, double tolerance) {
