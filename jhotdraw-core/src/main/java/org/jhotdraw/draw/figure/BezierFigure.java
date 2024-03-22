@@ -167,7 +167,7 @@ public class BezierFigure extends AbstractAttributedFigure {
     }
   }
 
-  @Override
+  /*@Override
   public boolean contains(Point2D.Double p, double scaleDenominator) {
     double tolerance = Math.max(2f, AttributeKeys.getStrokeTotalWidth(this, scaleDenominator) / 2d);
     if (isClosed() || attr().get(FILL_COLOR) != null && attr().get(UNCLOSED_PATH_FILLED)) {
@@ -212,6 +212,61 @@ public class BezierFigure extends AbstractAttributedFigure {
       }
     }
     return false;
+  }*/
+
+  @Override
+  public boolean contains(Point2D.Double p, double scaleDenominator) {
+    double tolerance = Math.max(2f, AttributeKeys.getStrokeTotalWidth(this, scaleDenominator) / 2d);
+    if (isClosed() || attr().get(FILL_COLOR) != null && attr().get(UNCLOSED_PATH_FILLED)) {
+      return isFigureClosedContains(p, scaleDenominator, tolerance);
+    }
+    if (!isClosed()) {
+      return isFigureNotClosedContains(p, tolerance);
+    }
+    return false;
+  }
+
+  private boolean isFigureClosedContains(Point2D.Double p, double scaleDenominator, double tolerance) {
+    if (path.contains(p)) {
+      return true;
+    }
+    double grow = AttributeKeys.getPerpendicularHitGrowth(this, scaleDenominator) * 2d;
+    GrowStroke gs =
+            new GrowStroke(
+                    grow,
+                    AttributeKeys.getStrokeTotalWidth(this, scaleDenominator)
+                            * attr().get(STROKE_MITER_LIMIT));
+    if (gs.createStrokedShape(path).contains(p)) {
+      return true;
+    }
+    return false;
+  }
+
+  private boolean isFigureNotClosedContains(Point2D.Double p, double tolerance) {
+    if (getCappedPath().outlineContains(p, tolerance)) {
+      return true;
+    }
+    if (attr().get(START_DECORATION) != null && isStartDecorationContains(p, tolerance)) {
+      return true;
+    }
+    if (attr().get(END_DECORATION) != null && isEndDecorationContains(p, tolerance)) {
+      return true;
+    }
+    return false;
+  }
+
+  private boolean isStartDecorationContains(Point2D.Double p, double tolerance) {
+    BezierPath cp = getCappedPath();
+    Point2D.Double p1 = path.get(0, 0);
+    Point2D.Double p2 = cp.get(0, 0);
+    return Geom.lineContainsPoint(p1.x, p1.y, p2.x, p2.y, p.x, p.y, tolerance);
+  }
+
+  private boolean isEndDecorationContains(Point2D.Double p, double tolerance) {
+    BezierPath cp = getCappedPath();
+    Point2D.Double p1 = path.get(path.size() - 1, 0);
+    Point2D.Double p2 = cp.get(path.size() - 1, 0);
+    return Geom.lineContainsPoint(p1.x, p1.y, p2.x, p2.y, p.x, p.y, tolerance);
   }
 
   @Override
