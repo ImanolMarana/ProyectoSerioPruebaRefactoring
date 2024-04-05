@@ -539,7 +539,7 @@ public abstract class AbstractApplication extends AbstractBean implements Applic
     }
 
     /** Updates the "File &gt; Open Recent" menu. */
-    protected void updateOpenRecentMenu() {
+    /*protected void updateOpenRecentMenu() {
       if (openRecentMenu.getItemCount() > 0) {
         JMenuItem clearRecentFilesItem = openRecentMenu.getItem(openRecentMenu.getItemCount() - 1);
         openRecentMenu.remove(openRecentMenu.getItemCount() - 1);
@@ -573,6 +573,51 @@ public abstract class AbstractApplication extends AbstractBean implements Applic
         // Add a separator and the clear recent files item.
         openRecentMenu.add(clearRecentFilesItem);
       }
+    }*/
+
+    protected void updateOpenRecentMenu() {
+      if (openRecentMenu.getItemCount() > 0) {
+        JMenuItem clearRecentFilesItem = openRecentMenu.getItem(openRecentMenu.getItemCount() - 1);
+        openRecentMenu.remove(openRecentMenu.getItemCount() - 1);
+        removeOldActions();
+        createAndAddNewActions();
+        addSeparatorAndClearItem(clearRecentFilesItem);
+      }
+    }
+
+    private void removeOldActions() {
+      for (Action action : openRecentActions) {
+        if (action instanceof Disposable) {
+          ((Disposable) action).dispose();
+        }
+      }
+      openRecentActions.clear();
+      openRecentMenu.removeAll();
+    }
+
+    private void createAndAddNewActions() {
+      if (getAction(view, LoadFileAction.ID) != null
+              || getAction(view, LoadDirectoryAction.ID) != null) {
+        for (URI f : getRecentURIs()) {
+          LoadRecentFileAction action =
+                  new LoadRecentFileAction(AbstractApplication.this, view, f);
+          openRecentMenu.add(action);
+          openRecentActions.add(action);
+        }
+      } else {
+        for (URI f : getRecentURIs()) {
+          OpenRecentFileAction action = new OpenRecentFileAction(AbstractApplication.this, f);
+          openRecentMenu.add(action);
+          openRecentActions.add(action);
+        }
+      }
+    }
+
+    private void addSeparatorAndClearItem(JMenuItem clearRecentFilesItem) {
+      if (getRecentURIs().size() > 0) {
+        openRecentMenu.addSeparator();
+      }
+      openRecentMenu.add(clearRecentFilesItem);
     }
 
     @Override
