@@ -123,17 +123,16 @@ public class TextAreaFigure extends AbstractAttributedDecoratedFigure implements
               as.addAttribute(TextAttribute.UNDERLINE, TextAttribute.UNDERLINE_LOW_ONE_PIXEL);
             }
             int tabCount = paragraphs[i].split("\t").length - 1;
-            DrawingContext auxDrawing = new DrawingContext(g,
+            Rectangle2D.Double paragraphBounds =
+                drawParagraph(
+                    g,
+                    as.getIterator(),
                     verticalPos,
                     maxVerticalPos,
                     leftMargin,
-                    rightMargin);
-            TabulationContext auxTabulation = new TabulationContext(tabStops, tabCount);
-            Rectangle2D.Double paragraphBounds =
-                drawParagraph(
-                    as.getIterator(),
-                    auxDrawing,
-                    auxTabulation);
+                    rightMargin,
+                    tabStops,
+                    tabCount);
             verticalPos = (float) (paragraphBounds.y + paragraphBounds.height);
             if (verticalPos > maxVerticalPos) {
               break;
@@ -145,33 +144,7 @@ public class TextAreaFigure extends AbstractAttributedDecoratedFigure implements
     }
   }
 
-  private class DrawingContext {
-    Graphics2D g;
-    float verticalPos;
-    float maxVerticalPos;
-    float leftMargin;
-    float rightMargin;
-
-    public DrawingContext(Graphics2D g, float verticalPos, float maxVerticalPos, float leftMargin, float rightMargin) {
-      this.g = g;
-      this.verticalPos = verticalPos;
-      this.maxVerticalPos = maxVerticalPos;
-      this.leftMargin = leftMargin;
-      this.rightMargin = rightMargin;
-    }
-  }
-
-  private class TabulationContext {
-    float[] tabStops;
-    int tabCount;
-
-    public TabulationContext(float[] tabStops, int tabCount) {
-      this.tabStops = tabStops;
-      this.tabCount = tabCount;
-    }
-  }
-
-  /*
+  /**
    * Draws or measures a paragraph of text at the specified y location and the bounds of the
    * paragraph.
    *
@@ -187,23 +160,20 @@ public class TextAreaFigure extends AbstractAttributedDecoratedFigure implements
    * @return Returns the actual bounds of the paragraph.
    */
   private Rectangle2D.Double drawParagraph(
-      /*Graphics2D g,
+      Graphics2D g,
       AttributedCharacterIterator styledText,
       float verticalPos,
       float maxVerticalPos,
       float leftMargin,
       float rightMargin,
       float[] tabStops,
-      int tabCount)*/
-      AttributedCharacterIterator styledText,
-      DrawingContext drawingContext,
-      TabulationContext tabulationContext) {
+      int tabCount) {
     // This method is based on the code sample given
     // in the class comment of java.awt.font.LineBreakMeasurer,
     // assume styledText is an AttributedCharacterIterator, and the number
     // of tabs in styledText is tabCount
-    Rectangle2D.Double paragraphBounds = new Rectangle2D.Double(drawingContext.leftMargin, drawingContext.verticalPos, 0, 0);
-    int[] tabLocations = new int[tabulationContext.tabCount + 1];
+    Rectangle2D.Double paragraphBounds = new Rectangle2D.Double(leftMargin, verticalPos, 0, 0);
+    int[] tabLocations = new int[tabCount + 1];
     int i = 0;
     for (char c = styledText.first();
         c != AttributedCharacterIterator.DONE;
@@ -212,13 +182,13 @@ public class TextAreaFigure extends AbstractAttributedDecoratedFigure implements
         tabLocations[i++] = styledText.getIndex();
       }
     }
-    tabLocations[tabulationContext.tabCount] = styledText.getEndIndex() - 1;
+    tabLocations[tabCount] = styledText.getEndIndex() - 1;
     // Now tabLocations has an entry for every tab's offset in
     // the text.  For convenience, the last entry is tabLocations
     // is the offset of the last character in the text.
     LineBreakMeasurer measurer = new LineBreakMeasurer(styledText, getFontRenderContext());
     int currentTab = 0;
-    while (measurer.getPosition() < styledText.getEndIndex() && drawingContext.verticalPos <= drawingContext.maxVerticalPos) {
+    while (measurer.getPosition() < styledText.getEndIndex() && verticalPos <= maxVerticalPos) {
       // Lay out and draw each line.  All segments on a line
       // must be computed before any drawing can occur, since
       // we must know the largest ascent on the line.
@@ -229,12 +199,12 @@ public class TextAreaFigure extends AbstractAttributedDecoratedFigure implements
       boolean lineContainsText = false;
       boolean lineComplete = false;
       float maxAscent = 0, maxDescent = 0;
-      float horizontalPos = drawingContext.leftMargin;
+      float horizontalPos = leftMargin;
       List<TextLayout> layouts = new ArrayList<>();
       List<Float> penPositions = new ArrayList<>();
       int first = layouts.size();
-      while (!lineComplete && drawingContext.verticalPos <= drawingContext.maxVerticalPos) {
-        float wrappingWidth = drawingContext.rightMargin - horizontalPos;
+      while (!lineComplete && verticalPos <= maxVerticalPos) {
+        float wrappingWidth = rightMargin - horizontalPos;
         TextLayout layout = null;
         layout = measurer.nextLayout(wrappingWidth, tabLocations[currentTab] + 1, lineContainsText);
         // layout can be null if lineContainsText is true
@@ -253,28 +223,28 @@ public class TextAreaFigure extends AbstractAttributedDecoratedFigure implements
         }
         if (measurer.getPosition() == styledText.getEndIndex()) {
           lineComplete = true;
-        } else if (tabulationContext.tabStops.length == 0 || horizontalPos >= tabulationContext.tabStops[tabulationContext.tabStops.length - 1]) {
+        } else if (tabStops.length == 0 || horizontalPos >= tabStops[tabStops.length - 1]) {
           lineComplete = true;
         }
         if (!lineComplete) {
           // move to next tab stop
           int j;
-          for (j = 0; horizontalPos >= tabulationContext.tabStops[j]; j++) {}
-          horizontalPos = tabulationContext.tabStops[j];
+          for (j = 0; horizontalPos >= tabStops[j]; j++) {}
+          horizontalPos = tabStops[j];
         }
       }
       // If there is only one layout element on the line, and we are
       // drawing, then honor alignment
-      if (first == layouts.size() - 1 && drawingContext.g != null) {
+      if (first == layouts.size() - 1 && g != null) {
         switch (attr().get(TEXT_ALIGNMENT)) {
           case TRAILING:
-            penPositions.set(first, drawingContext.rightMargin - layouts.get(first).getVisibleAdvance() - 1);
+            penPositions.set(first, rightMargin - layouts.get(first).getVisibleAdvance() - 1);
             break;
           case CENTER:
             penPositions.set(
                 first,
-                (drawingContext.rightMargin - 1 - drawingContext.leftMargin - layouts.get(first).getVisibleAdvance()) / 2
-                    + drawingContext.leftMargin);
+                (rightMargin - 1 - leftMargin - layouts.get(first).getVisibleAdvance()) / 2
+                    + leftMargin);
             break;
           case BLOCK:
             // not supported
@@ -284,25 +254,25 @@ public class TextAreaFigure extends AbstractAttributedDecoratedFigure implements
             break;
         }
       }
-      drawingContext.verticalPos += maxAscent;
+      verticalPos += maxAscent;
       Iterator<TextLayout> layoutEnum = layouts.iterator();
       Iterator<Float> positionEnum = penPositions.iterator();
       // now iterate through layouts and draw them
       while (layoutEnum.hasNext()) {
         TextLayout nextLayout = layoutEnum.next();
         float nextPosition = positionEnum.next();
-        if (drawingContext.g != null) {
-          nextLayout.draw(drawingContext.g, nextPosition, drawingContext.verticalPos);
+        if (g != null) {
+          nextLayout.draw(g, nextPosition, verticalPos);
         }
         Rectangle2D layoutBounds = nextLayout.getBounds();
         paragraphBounds.add(
             new Rectangle2D.Double(
                 layoutBounds.getX() + nextPosition,
-                layoutBounds.getY() + drawingContext.verticalPos,
+                layoutBounds.getY() + verticalPos,
                 layoutBounds.getWidth(),
                 layoutBounds.getHeight()));
       }
-      drawingContext.verticalPos += maxDescent;
+      verticalPos += maxDescent;
     }
     return paragraphBounds;
   }
