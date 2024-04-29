@@ -525,13 +525,16 @@ public class TextAreaFigure extends AbstractAttributedDecoratedFigure implements
             as.addAttribute(TextAttribute.UNDERLINE, TextAttribute.UNDERLINE_LOW_ONE_PIXEL);
           }
           int tabCount = paragraphs[i].split("\t").length - 1;
-          DrawingContext drawingContext = new DrawingContext(null, verticalPos, maxVerticalPos, leftMargin, rightMargin);
-          TabulationContext tabulationContext = new TabulationContext(tabStops, tabCount);
           Rectangle2D.Double paragraphBounds =
               drawParagraph(
+                  null,
                   as.getIterator(),
-                  drawingContext,
-                  tabulationContext);
+                  verticalPos,
+                  maxVerticalPos,
+                  leftMargin,
+                  rightMargin,
+                  tabStops,
+                  tabCount);
           verticalPos = (float) (paragraphBounds.y + paragraphBounds.height);
           textRect.add(paragraphBounds);
         }
